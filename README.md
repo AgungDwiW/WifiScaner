@@ -1,2 +1,2 @@
-#WifiScanner
-campture wifi signal strength, and coordinate and put it on csv for dataset
+## WifiScaner
+Capture WiFi signal strength, input coordinate, and save to csv for dataset
