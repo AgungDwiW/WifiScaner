@@ -24,6 +24,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static android.os.SystemClock.sleep;
 import static android.text.TextUtils.isEmpty;
@@ -41,13 +42,15 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter adapter;
     private TextView console;
     private TextView coordinate;
-    private String coorX, coorY;
-    String csv = (Environment.getExternalStorageDirectory().getAbsolutePath() + "/datasetKoordinat.csv"); // Here csv file name is MyCsvFile.csv
+    private int curLen;
+    private String csv;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        String uuid = UUID.randomUUID().toString();
+        csv = (Environment.getExternalStorageDirectory().getAbsolutePath() + "/datasetKoordinat"+uuid + ".csv"); // Here csv file name is MyCsvFile.csv
         buttonScan = findViewById(R.id.scanBtn);
         buttonCSV = findViewById(R.id.buttonCSV);
         buttonScan.setOnClickListener(new View.OnClickListener() {
@@ -62,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
                 printCSV();
             }
         });
-
+        curLen = 0;
         console = findViewById(R.id.console);
         coordinate = findViewById(R.id.Coordinate);
         listView = findViewById(R.id.wifiList);
@@ -94,21 +97,30 @@ public class MainActivity extends AppCompatActivity {
             console.setText(console.getText()+"input coordinate! \n" );
             return;
         }
-        try {
-            String a= (coordinate.getText()+"");
-            String[] splited = a.split(",");
-            coorX = splited[0];
-            coorY= splited[1];
-        }catch (Exception e){
-            console.setText(console.getText()+"coordinae error; must be x,y! \n" );
-            return;
+
+        while (results_all.size() <curLen+20) {
+            console.setText(console.getText() + "\n scanning wifi; location:" + coordinate.getText() + "\n");
+            arrayList.clear();
+            registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+            //wifiManager.startScan();
+            //Toast.makeText(this, "Scanning WiFi ...", Toast.LENGTH_SHORT).show();
+            results = wifiManager.getScanResults();
+            ArrayList<String> temp = new ArrayList<>();
+            temp.add(coordinate.getText() +"");
+            for (ScanResult scanResult : results) {
+                temp.add(scanResult.BSSID );
+                temp.add(scanResult.level+"");
+                arrayList.add(scanResult.BSSID + " - " + scanResult.level);
+                adapter.notifyDataSetChanged();
+            }
+            String[] temp2 = new String[temp.size()];
+            temp2 = temp.toArray(temp2);
+            results_all.add(temp2);
+            sleep(500);
         }
-        console.setText(console.getText()+"\n scanning wifi; location:" + coordinate.getText()+"\n" );
-        arrayList.clear();
-        registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         wifiManager.startScan();
-        //Toast.makeText(this, "Scanning WiFi ...", Toast.LENGTH_SHORT).show();
-        console.setText(console.getText()+"scanning done; Current data: " + results_all.size() + "\n" );
+        console.setText(console.getText() + "scanning done; Current data: " + results_all.size() + "\n");
+        curLen = results_all.size();
     }
 
     BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
@@ -116,18 +128,17 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             results = wifiManager.getScanResults();
             unregisterReceiver(this);
-            ArrayList<String> temp = new ArrayList<>();
-            temp.add(coorX);
-            temp.add(coorY);
+            //ArrayList<String> temp = new ArrayList<>();
+            //temp.add(coordinate.getText() +"");
             for (ScanResult scanResult : results) {
-                temp.add(scanResult.SSID );
-                temp.add(scanResult.level+"");
-                arrayList.add(scanResult.SSID + " - " + scanResult.level);
+                //temp.add(scanResult.BSSID );
+                //temp.add(scanResult.level+"");
+                arrayList.add(scanResult.BSSID + " - " + scanResult.level);
                 adapter.notifyDataSetChanged();
             }
-            String[] temp2 = new String[temp.size()];
-            temp2 = temp.toArray(temp2);
-            results_all.add(temp2);
+            //String[] temp2 = new String[temp.size()];
+            //temp2 = temp.toArray(temp2);
+            //results_all.add(temp2);
         };
     };
 }
