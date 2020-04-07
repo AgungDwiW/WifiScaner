@@ -6,8 +6,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.text.Layout;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -20,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.opencsv.CSVWriter;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,26 +40,39 @@ public class MainActivity extends AppCompatActivity {
     private Button buttonCSV;
     private int size = 0;
     private List<ScanResult> results;
-    private List<String[]> results_all = new ArrayList<String[]>();
-    private ArrayList<String> arrayList = new ArrayList<>();
+    public List<String[]> results_all = new ArrayList<String[]>();
+    public ArrayList<String> arrayList = new ArrayList<>();
     private ArrayAdapter adapter;
     private TextView console;
     private TextView coordinate;
     private int curLen;
     private String csv;
+    public int n;
+    public boolean stop;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        n = 0;
         setContentView(R.layout.activity_main);
-        String uuid = UUID.randomUUID().toString();
-        csv = (Environment.getExternalStorageDirectory().getAbsolutePath() + "/datasetKoordinat"+uuid + ".csv"); // Here csv file name is MyCsvFile.csv
+
+
         buttonScan = findViewById(R.id.scanBtn);
         buttonCSV = findViewById(R.id.buttonCSV);
+        stop = true;
         buttonScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                scanWifi();
+                stop = !stop;
+                if (!stop) {
+                    buttonScan.setText("abort");
+                    new scanWifi().execute();
+                }
+                else{
+                    buttonScan.setText("scan wifi");
+                }
+
             }
         });
         buttonCSV.setOnClickListener(new View.OnClickListener() {
@@ -82,6 +98,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void printCSV(){
         try {
+            String uuid = UUID.randomUUID().toString();
+            csv = (getExternalFilesDir(null) + "/datasetKoordinat"+uuid + ".csv"); // Here csv file name is MyCsvFile.csv
             CSVWriter writer = null;
             writer = new CSVWriter(new FileWriter(csv));
             writer.writeAll(results_all);
@@ -89,40 +107,82 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        console.setText(console.getText()+"exported all "+ results_all.size() + "data to "+ csv);
+        printConsole("exported all "+ results_all.size() + "data to "+ csv);
     }
-
-    private void scanWifi() {
-        if (isEmpty(coordinate.getText())){
-            console.setText(console.getText()+"input coordinate! \n" );
-            return;
+    public void printConsole(String s){
+        console.append(n+": "+ s +"\n");
+        n+=1;
+        final Layout layout = console.getLayout();
+        if(layout != null){
+            int scrollDelta = layout.getLineBottom(console.getLineCount() - 1)
+                    - console.getScrollY() - console.getHeight();
+            if(scrollDelta > 0)
+                console.scrollBy(0, scrollDelta);
         }
 
-        while (results_all.size() <curLen+20) {
-            console.setText(console.getText() + "\n scanning wifi; location:" + coordinate.getText() + "\n");
-            arrayList.clear();
-            registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-            //wifiManager.startScan();
-            //Toast.makeText(this, "Scanning WiFi ...", Toast.LENGTH_SHORT).show();
-            results = wifiManager.getScanResults();
-            ArrayList<String> temp = new ArrayList<>();
-            temp.add(coordinate.getText() +"");
-            for (ScanResult scanResult : results) {
-                temp.add(scanResult.BSSID );
-                temp.add(scanResult.level+"");
-                arrayList.add(scanResult.BSSID + " - " + scanResult.level);
-                adapter.notifyDataSetChanged();
+    }
+
+    private class scanWifi extends AsyncTask<String, Void, String> {
+        // daemon class to get rssi and freq of certain wifi
+
+
+        @Override
+        protected String doInBackground(String... params) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    printConsole("started;");
+
+                }
+            });
+            for (int x = 0; x<100; x++){
+                if (stop){
+                    break;
+                }
+                wifiManager.startScan();
+                results = wifiManager.getScanResults();
+                ArrayList<String> temp = new ArrayList<>();
+                temp.add(coordinate.getText() +"");
+                for (ScanResult scanResult : results) {
+                    temp.add(scanResult.SSID);
+                    temp.add(scanResult.BSSID );
+                    temp.add(scanResult.level+"");
+                    temp.add(scanResult.frequency+"");
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        printConsole("scanned data - " + results_all.size());
+                        registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+                        buttonScan.setText("scan wifi");
+                    }
+                });
+                String[] temp2 = new String[temp.size()];
+                temp2 = temp.toArray(temp2);
+                results_all.add(temp2);
+                sleep(100);
             }
-            String[] temp2 = new String[temp.size()];
-            temp2 = temp.toArray(temp2);
-            results_all.add(temp2);
-            sleep(500);
-        }
-        wifiManager.startScan();
-        console.setText(console.getText() + "scanning done; Current data: " + results_all.size() + "\n");
-        curLen = results_all.size();
-    }
 
+            return "";
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            stop = !stop;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    printConsole("scanning done; Current data: " + results_all.size());
+
+
+                }
+            });
+            // do something with result
+        }
+    }
     BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -133,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
             for (ScanResult scanResult : results) {
                 //temp.add(scanResult.BSSID );
                 //temp.add(scanResult.level+"");
-                arrayList.add(scanResult.BSSID + " - " + scanResult.level);
+                arrayList.add(scanResult.SSID + " - " +scanResult.BSSID + " - " + scanResult.level + " - " +scanResult.frequency);
                 adapter.notifyDataSetChanged();
             }
             //String[] temp2 = new String[temp.size()];
