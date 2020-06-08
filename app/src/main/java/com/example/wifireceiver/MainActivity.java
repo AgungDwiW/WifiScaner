@@ -32,7 +32,7 @@ import static android.os.SystemClock.sleep;
 public class MainActivity extends AppCompatActivity {
 
     private WifiManager wifiManager;
-    private ListView listView;
+
     private Button buttonScan;
     private Button buttonCSV;
     private int size = 0;
@@ -47,16 +47,22 @@ public class MainActivity extends AppCompatActivity {
     public int n;
     public boolean stop;
     private Button clear;
-
+    public int itter, sleeptime;
+    private TextView t_itter, t_sleeptime;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        n = 0;
         setContentView(R.layout.activity_main);
+        n = 0;
 
+        itter = 1000;
+        sleeptime = 100;
 
         buttonScan = findViewById(R.id.scanBtn);
         buttonCSV = findViewById(R.id.buttonCSV);
+        t_itter = findViewById(R.id.itter);
+        t_sleeptime = findViewById(R.id.sleep);
+
         stop = true;
         buttonScan.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -89,7 +95,6 @@ public class MainActivity extends AppCompatActivity {
         curLen = 0;
         console = findViewById(R.id.console);
         coordinate = findViewById(R.id.Coordinate);
-        listView = findViewById(R.id.wifiList);
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         console.setMovementMethod(new ScrollingMovementMethod());
         if (!wifiManager.isWifiEnabled()) {
@@ -97,8 +102,8 @@ public class MainActivity extends AppCompatActivity {
             wifiManager.setWifiEnabled(true);
         }
 
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, arrayList);
-        listView.setAdapter(adapter);
+
+
     }
 
     private void clear(){
@@ -144,14 +149,27 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
 
                     printConsole("started;");
-
+                    buttonScan.setText("stop scan");
                 }
             });
-            for (int x = 0; x<100; x++){
+
+            try{
+                sleeptime =  Integer.parseInt(t_sleeptime.getText().toString()) ;
+                itter = Integer.parseInt(t_itter.getText().toString());
+            }
+            catch (Exception E){
+
+            }
+
+            for (int x = 0; x<itter; x++){
                 if (stop){
                     break;
                 }
-                wifiManager.startScan();
+                if(!wifiManager.startScan()){
+                    x-=1;
+                    continue;
+                }
+
                 results = wifiManager.getScanResults();
                 ArrayList<String> temp = new ArrayList<>();
                 temp.add(coordinate.getText() +"");
@@ -165,14 +183,14 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         printConsole("scanned data - " + results_all.size());
-                        registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
                         buttonScan.setText("scan wifi");
                     }
                 });
+
                 String[] temp2 = new String[temp.size()];
                 temp2 = temp.toArray(temp2);
                 results_all.add(temp2);
-                sleep(300);
+                sleep(sleeptime);
             }
 
             return "";
@@ -187,29 +205,9 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
 
                     printConsole("scanning done; Current data: " + results_all.size());
-
-
                 }
             });
             // do something with result
         }
     }
-    BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            results = wifiManager.getScanResults();
-            unregisterReceiver(this);
-            //ArrayList<String> temp = new ArrayList<>();
-            //temp.add(coordinate.getText() +"");
-            for (ScanResult scanResult : results) {
-                //temp.add(scanResult.BSSID );
-                //temp.add(scanResult.level+"");
-                arrayList.add(scanResult.SSID + " - " +scanResult.BSSID + " - " + scanResult.level + " - " +scanResult.frequency);
-                adapter.notifyDataSetChanged();
-            }
-            //String[] temp2 = new String[temp.size()];
-            //temp2 = temp.toArray(temp2);
-            //results_all.add(temp2);
-        };
-    };
 }
