@@ -8,7 +8,6 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.Layout;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
@@ -22,7 +21,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.opencsv.CSVWriter;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +28,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static android.os.SystemClock.sleep;
-import static android.text.TextUtils.isEmpty;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private String csv;
     public int n;
     public boolean stop;
-
+    private Button clear;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -75,6 +72,14 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+        clear = findViewById(R.id.clear);
+
+        clear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clear();
+            }
+        });
         buttonCSV.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -94,6 +99,12 @@ public class MainActivity extends AppCompatActivity {
 
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, arrayList);
         listView.setAdapter(adapter);
+    }
+
+    private void clear(){
+        printConsole("data cleared");
+        curLen = 0;
+        results_all.clear();
     }
 
     private void printCSV(){
@@ -161,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
                 String[] temp2 = new String[temp.size()];
                 temp2 = temp.toArray(temp2);
                 results_all.add(temp2);
-                sleep(100);
+                sleep(300);
             }
 
             return "";

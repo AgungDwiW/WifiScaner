@@ -8,17 +8,17 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="129dp">
+        android:layout_height="254dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" >
+            android:orientation="vertical">
 
             <ListView
                 android:id="@+id/wifiList"
                 android:layout_width="match_parent"
-                android:layout_height="160dp"
+                android:layout_height="307dp"
                 android:layout_weight="0.97">
 
             </ListView>
@@ -46,6 +46,12 @@
         android:layout_width="match_parent"
         android:layout_height="135dp"
         android:scrollbars="vertical" />
+
+    <Button
+        android:id="@+id/clear"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="clearData" />
 
     <Button
         android:id="@+id/buttonCSV"
