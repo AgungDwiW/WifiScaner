@@ -8,11 +8,13 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.Layout;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,7 +25,9 @@ import com.opencsv.CSVWriter;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private Button clear;
     public int itter, sleeptime;
     private TextView t_itter, t_sleeptime;
+    private CheckBox verbose;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
         buttonCSV = findViewById(R.id.buttonCSV);
         t_itter = findViewById(R.id.itter);
         t_sleeptime = findViewById(R.id.sleep);
+        verbose = findViewById(R.id.verbose);
 
         stop = true;
         buttonScan.setOnClickListener(new View.OnClickListener() {
@@ -107,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void clear(){
+        console.setText("");
         printConsole("data cleared");
         curLen = 0;
         results_all.clear();
@@ -115,7 +122,9 @@ public class MainActivity extends AppCompatActivity {
     private void printCSV(){
         try {
             String uuid = UUID.randomUUID().toString();
-            csv = (getExternalFilesDir(null) + "/datasetKoordinat"+uuid + ".csv"); // Here csv file name is MyCsvFile.csv
+            SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yy-HH:mm");
+            String currentDateandTime = sdf.format(new Date());
+            csv = (Environment.getExternalStorageDirectory().getAbsolutePath()+ "/"+  coordinate.getText().toString() + " at " + currentDateandTime + ".csv"); // Here csv file name is MyCsvFile.csv
             CSVWriter writer = null;
             writer = new CSVWriter(new FileWriter(csv));
             writer.writeAll(results_all);
@@ -149,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
 
                     printConsole("started;");
-                    buttonScan.setText("stop scan");
+
                 }
             });
 
@@ -182,8 +191,9 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        printConsole("scanned data - " + results_all.size());
-                        buttonScan.setText("scan wifi");
+                        if (verbose.isChecked())
+                            printConsole("scanned data - " + results_all.size());
+
                     }
                 });
 
@@ -205,6 +215,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
 
                     printConsole("scanning done; Current data: " + results_all.size());
+                    buttonScan.setText("scan wifi");
                 }
             });
             // do something with result
